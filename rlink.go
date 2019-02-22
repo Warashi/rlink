@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/xerrors"
 )
 
-func MkLinks(srcRoot, dstRoot string, relative, force bool) error {
+func MkLinks(srcRoot, dstRoot string, relative, force bool, ignore string) error {
 	return filepath.Walk(srcRoot, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
+		if info.IsDir() || strings.Contains(path, ignore){
 			return nil
 		}
 
