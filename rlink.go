@@ -4,14 +4,30 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+	"regexp"
 
 	"golang.org/x/xerrors"
 )
 
-func MkLinks(srcRoot, dstRoot string, relative, force bool, ignore string) error {
+type Main struct {
+	relative bool
+	force bool
+	dryrun bool
+	ignore *regexp.Regexp
+}
+
+func New(relative, force, dryrun bool, ignore string) Main {
+	return Main{
+		relative: relative,
+		force:force,
+		dryrun:dryrun,
+		ignore: regexp.MustCompile(ignore),
+	}
+}
+
+func (m Main) MkLinks(srcRoot, dstRoot string) error {
 	return filepath.Walk(srcRoot, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() || strings.Contains(path, ignore){
+		if info.IsDir() || m.ignore.MatchString(path) {
 			return nil
 		}
 
@@ -30,7 +46,7 @@ func MkLinks(srcRoot, dstRoot string, relative, force bool, ignore string) error
 			return xerrors.Errorf("failed to filepath.Abs of %s: %w", filepath.Join(dstRoot, rel), err)
 		}
 
-		if err := mklink(src, dst, relative, force); err != nil {
+		if err := m.mklink(src, dst); err != nil {
 			return xerrors.Errorf("failed to mklink: %w", err)
 		}
 
@@ -38,38 +54,42 @@ func MkLinks(srcRoot, dstRoot string, relative, force bool, ignore string) error
 	})
 }
 
-func exists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-func mklink(srcAbs, dstAbs string, relative, force bool) error {
-	if err := os.MkdirAll(filepath.Dir(dstAbs), 0755); err != nil {
-		return xerrors.Errorf("failed to MkdirAll %s: %w", filepath.Dir(dstAbs), err)
+func (m Main) mklink(src, dst string) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return xerrors.Errorf("failed to MkdirAll %s: %w", filepath.Dir(dst), err)
 	}
 
 	var path string
-	if relative {
+	if m.relative {
 		var err error
-		path, err = filepath.Rel(filepath.Dir(dstAbs), srcAbs)
+		path, err = filepath.Rel(filepath.Dir(dst), src)
 		if err != nil {
-			return xerrors.Errorf("failed to filepath.Rel of %s, %s: %w", dstAbs, srcAbs, err)
+			return xerrors.Errorf("failed to filepath.Rel of %s, %s: %w", dst, src, err)
 		}
 	} else {
-		path = srcAbs
+		path = src
 	}
 
-	if force {
-		os.Remove(dstAbs)
-	} else if exists(dstAbs) {
+	if m.force {
+		if !m.dryrun {
+			os.Remove(dst)
+		}
+	} else if exists(dst) {
 		return nil
 	}
 
-	if err := os.Symlink(path, dstAbs); err != nil {
-		return xerrors.Errorf("failed to create symlink. old: %s, new:%s. : %w", path, dstAbs, err)
+	if !m.dryrun {
+		if err := os.Symlink(path, dst); err != nil {
+			return xerrors.Errorf("failed to create symlink. old: %s, new:%s. : %w", path, dst, err)
+		}
 	}
 
-	fmt.Printf("created %s to %s\n", dstAbs, path)
+	fmt.Printf("created %s to %s\n", dst, path)
 
 	return nil
+}
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
