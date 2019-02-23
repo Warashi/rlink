@@ -16,12 +16,12 @@ type Main struct {
 	ignore *regexp.Regexp
 }
 
-func New(relative, force, dryrun bool, ignore string) Main {
+func New(relative, force, dryrun bool, ignore *regexp.Regexp) Main {
 	return Main{
 		relative: relative,
 		force:force,
 		dryrun:dryrun,
-		ignore: regexp.MustCompile(ignore),
+		ignore: ignore,
 	}
 }
 
