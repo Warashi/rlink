@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-
-	"golang.org/x/xerrors"
 )
 
 type Main struct {
@@ -33,21 +31,21 @@ func (m Main) MkLinks(srcRoot, dstRoot string) error {
 
 		rel, err := filepath.Rel(srcRoot, path)
 		if err != nil {
-			return xerrors.Errorf("failed to filepath.Rel of %s, %s: %w", srcRoot, path, err)
+			return fmt.Errorf("failed to filepath.Rel of %s, %s: %w", srcRoot, path, err)
 		}
 
 		src, err := filepath.Abs(path)
 		if err != nil {
-			return xerrors.Errorf("failed to filepath.Abs of %s: %w", path, err)
+			return fmt.Errorf("failed to filepath.Abs of %s: %w", path, err)
 		}
 
 		dst, err := filepath.Abs(filepath.Join(dstRoot, rel))
 		if err != nil {
-			return xerrors.Errorf("failed to filepath.Abs of %s: %w", filepath.Join(dstRoot, rel), err)
+			return fmt.Errorf("failed to filepath.Abs of %s: %w", filepath.Join(dstRoot, rel), err)
 		}
 
 		if err := m.mklink(src, dst); err != nil {
-			return xerrors.Errorf("failed to mklink: %w", err)
+			return fmt.Errorf("failed to mklink: %w", err)
 		}
 
 		return nil
@@ -56,7 +54,7 @@ func (m Main) MkLinks(srcRoot, dstRoot string) error {
 
 func (m Main) mklink(src, dst string) error {
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-		return xerrors.Errorf("failed to MkdirAll %s: %w", filepath.Dir(dst), err)
+		return fmt.Errorf("failed to MkdirAll %s: %w", filepath.Dir(dst), err)
 	}
 
 	var path string
@@ -64,7 +62,7 @@ func (m Main) mklink(src, dst string) error {
 		var err error
 		path, err = filepath.Rel(filepath.Dir(dst), src)
 		if err != nil {
-			return xerrors.Errorf("failed to filepath.Rel of %s, %s: %w", dst, src, err)
+			return fmt.Errorf("failed to filepath.Rel of %s, %s: %w", dst, src, err)
 		}
 	} else {
 		path = src
@@ -80,7 +78,7 @@ func (m Main) mklink(src, dst string) error {
 
 	if !m.dryrun {
 		if err := os.Symlink(path, dst); err != nil {
-			return xerrors.Errorf("failed to create symlink. old: %s, new:%s. : %w", path, dst, err)
+			return fmt.Errorf("failed to create symlink. old: %s, new:%s. : %w", path, dst, err)
 		}
 	}
 
